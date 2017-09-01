@@ -1,43 +1,48 @@
 {
-    "homepage": "http://nodejs.org",
-    "version": "6.10.3",
+    "homepage": "https://nodejs.org",
+    "version": "6.11.2",
     "license": "MIT",
     "architecture": {
         "64bit": {
-            "url": "https://nodejs.org/dist/v6.10.3/node-v6.10.3-x64.msi",
-            "hash": "3ab1286e8fdadc60f57a97f2222ad6b3d7a48847a52ef812cc8d5f354bf500ff"
+            "url": "https://nodejs.org/dist/v6.11.2/node-v6.11.2-win-x64.7z",
+            "hash": "9189de5ef26e40bc77c2f999368a136c8dfb13d16298c0037a7cd2135adee4be",
+            "extract_dir": "node-v6.11.2-win-x64"
         },
         "32bit": {
-            "url": "https://nodejs.org/dist/v6.10.3/node-v6.10.3-x86.msi",
-            "hash": "d4000be1329737bd2f4c2e54abc939ca249c11cbcc8898240fece37cb74cf09f"
+            "url": "https://nodejs.org/dist/v6.11.2/node-v6.11.2-win-x86.7z",
+            "hash": "e38c74a43f72cce05caeaf77afb49f6979345b7a891abdcd5d9e4b72d34cc710",
+            "extract_dir": "node-v6.11.2-win-x86"
         }
     },
-    "extract_dir": "nodejs",
     "persist": [
-        "bin"
+        "bin",
+        "cache"
     ],
     "env_add_path": [
         ".",
         "bin"
     ],
     "post_install": "
-# Set npm prefix to install modules inside bin
-Set-Content -Value \"prefix=$dir\\bin\" -Path $dir\\node_modules\\npm\\npmrc",
+        # Set npm prefix to install modules inside bin and npm cache so they persist
+        Set-Content -Value \"prefix=$persist_dir\\bin`ncache=$persist_dir\\cache\" -Path $dir\\node_modules\\npm\\npmrc
+    ",
     "checkver": {
         "url": "https://nodejs.org/en/download/",
-        "re": "LTS version: <strong>v([\\d.]+)</strong>"
+        "re": "LTS Version: <strong>v([\\d.]+)</strong>"
     },
     "autoupdate": {
         "architecture": {
             "64bit": {
-                "url": "https://nodejs.org/dist/v$version/node-v$version-x64.msi"
+                "url": "https://nodejs.org/dist/v$version/node-v$version-win-x64.7z",
+                "extract_dir": "node-v$version-win-x64"
             },
             "32bit": {
-                "url": "https://nodejs.org/dist/v$version/node-v$version-x86.msi"
+                "url": "https://nodejs.org/dist/v$version/node-v$version-win-x86.7z",
+                "extract_dir": "node-v$version-win-x86"
             }
         },
         "hash": {
-            "url": "https://nodejs.org/dist/v$version/SHASUMS256.txt.asc"
+            "url": "$baseurl/SHASUMS256.txt.asc"
         }
     }
 }

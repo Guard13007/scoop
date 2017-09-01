@@ -13,18 +13,27 @@ param(
     [String]$dir,
     [Switch]$push = $false,
     [Switch]$request = $false,
-    [Switch]$help = $false
+    [Switch]$help = $false,
+    [string[]]$specialSnowflakes
 )
 
-if(!$dir) { $dir = "$psscriptroot\.." }
+if(!$dir) { $dir = "$psscriptroot\..\bucket" }
 $dir = resolve-path $dir
 
 . "$psscriptroot\..\lib\manifest.ps1"
 . "$psscriptroot\..\lib\json.ps1"
+. "$psscriptroot\..\lib\unix.ps1"
 
-if (!(scoop which hub)) {
-    Write-Host -f yellow "Please install hub (scoop install hub)"
-    exit 1
+if(is_unix) {
+    if (!(which hub)) {
+        Write-Host -f yellow "Please install hub ('brew install hub' or visit: https://hub.github.com/)"
+        exit 1
+    }
+} else {
+    if (!(scoop which hub)) {
+        Write-Host -f yellow "Please install hub 'scoop install hub'"
+        exit 1
+    }
 }
 
 if ((!$push -and !$request) -or $help) {
@@ -113,7 +122,13 @@ if($push -eq $true) {
     execute("hub push origin master")
 }
 
-. "$dir\bin\checkver.ps1" * -update
+. "$psscriptroot\checkver.ps1" * -update -dir $dir
+if($specialSnowflakes) {
+    write-host -f DarkCyan "Forcing update on our special snowflakes: $($specialSnowflakes -join ',')"
+    $specialSnowflakes -split ',' | % {
+        . "$psscriptroot\checkver.ps1" $_ -update -forceUpdate -dir $dir
+    }
+}
 
 hub diff --name-only | % {
     $manifest = $_
@@ -132,7 +147,15 @@ hub diff --name-only | % {
     if($push -eq $true) {
         Write-Host -f DarkCyan "Creating update $app ($version) ..."
         execute "hub add $manifest"
-        execute "hub commit -m 'Update $app to version $version'"
+
+        # detect if file was staged, because it's not when only LF or CRLF have changed
+        $status = iex "hub status --porcelain -uno"
+        $status = $status | select-object -first 1
+        if($status -and $status.StartsWith('M  ') -and $status.EndsWith("$app.json")) {
+            execute "hub commit -m 'Update $app to version $version'"
+        } else {
+            Write-Host -f Yellow "Skipping $app because only LF/CRLF changes were detected ..."
+        }
     } else {
         pull_requests $json $app $upstream $manifest
     }

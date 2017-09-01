@@ -1,7 +1,7 @@
 {
     "homepage": "https://yarnpkg.com/",
     "license": "BSD",
-    "version": "0.23.4",
+    "version": "0.27.5",
     "suggest": {
         "Node.js": [
             "nodejs",
@@ -11,9 +11,21 @@
             "nvm"
         ]
     },
-    "url": "https://yarnpkg.com/downloads/0.23.4/yarn-0.23.4.msi",
-    "hash": "0e3d64d86e743a3a2921d967440c61a09d936d4de7e683cacaf331267cdcf39b",
-    "env_add_path": "Yarn\\bin",
+    "url": "https://yarnpkg.com/downloads/0.27.5/yarn-0.27.5.msi",
+    "hash": "a3dfa13632d32a15066f152f758082d662f3ed1ed5f3e9ecda0fed877de6eb24",
+    "persist": [
+        "cache",
+        "bin"
+    ],
+    "post_install": "
+        yarn config delete cache # 0.24.6 | remove wrong configuration value | delete after two updates
+        yarn config set cache-folder \"$persist_dir\\cache\"
+        yarn config set prefix \"$persist_dir\\bin\"
+    ",
+    "env_add_path": [
+        "bin",
+        "Yarn\\bin"
+    ],
     "checkver": {
         "url": "https://yarnpkg.com/latest-version",
         "re": "([\\d.]+)"

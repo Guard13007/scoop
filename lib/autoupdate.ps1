@@ -9,14 +9,6 @@ TODO
 . "$psscriptroot/core.ps1"
 . "$psscriptroot/json.ps1"
 
-function substitute([String] $str, [Hashtable] $params) {
-    $params.GetEnumerator() | % {
-        $str = $str.Replace($_.Name, $_.Value)
-    }
-
-    return $str
-}
-
 function find_hash_in_rdf([String] $url, [String] $filename) {
     Write-Host -f DarkYellow "RDF URL: $url"
     Write-Host -f DarkYellow "File: $filename"
@@ -66,7 +58,7 @@ function find_hash_in_textfile([String] $url, [String] $basename, [String] $rege
 
     # find hash with filename in $hashfile (will be overridden by $regex)
     if ($hash.Length -eq 0 -and $regex.Length -eq 0) {
-        $filenameRegex = "([a-fA-F0-9]+)\s+\*?(?:`$basename)"
+        $filenameRegex = "([a-fA-F0-9]+)\s+(?:\.\/|\*)?(?:`$basename)"
         $filenameRegex = substitute $filenameRegex @{'$basename' = [regex]::Escape($basename)}
         if ($hashfile -match $filenameRegex) {
             $hash = $matches[1]
@@ -103,19 +95,15 @@ function get_hash_for_app([String] $app, $config, [String] $version, [String] $u
     `download` Last resort, download the real file and hash it
     #>
     $hashmode = $config.mode
-    if ($url.Contains("#")) {
-        <#
-        The download url can end with a hash to specify the local download name.
-        We need to original filename to extract the hash from the file
-        Example: julia.json
-        #>
-        $basename = fname($url.Substring(0, $url.IndexOf("#")))
-    } else {
-        $basename = fname($url)
-    }
+    $basename = url_remote_filename($url)
 
-    $hashfile_url = substitute $config.url @{'$url' = $url}
+    $hashfile_url = substitute $config.url @{
+        '$url' = (strip_fragment $url);
+        '$baseurl' = (strip_filename (strip_fragment $url)).TrimEnd('/')
+        '$basename' = $basename
+    }
     $hashfile_url = substitute $hashfile_url $substitutions
+    if($hashfile_url) { write-host -f yellow $hashfile_url }
 
     if($hashmode.Length -eq 0 -and $config.url.Length -ne 0) {
         $hashmode = "extract"
@@ -276,11 +264,14 @@ function autoupdate([String] $app, $dir, $json, [String] $version, [Hashtable] $
     # update properties
     update_manifest_prop "extract_dir" $json $substitutions
 
+    # update license
+    update_manifest_prop "license" $json $substitutions
+
     if ($has_changes -and !$has_errors) {
         # write file
         Write-Host -f DarkGreen "Writing updated $app manifest"
 
-        $path = "$dir\$app.json"
+        $path = join-path $dir "$app.json"
 
         $file_content = $json | ConvertToPrettyJson
         [System.IO.File]::WriteAllLines($path, $file_content)
